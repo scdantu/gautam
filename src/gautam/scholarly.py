@@ -18,10 +18,10 @@ _last_call = 0.0
 _rate_lock = threading.Lock()  # shared by parallel lookups: still at most ~5 calls per second in total
 
 
-def _client(email: str = "") -> httpx.Client:
+def _client(email: str = "", timeout: float = 30) -> httpx.Client:
     ua = f"ProjectGautam/{__version__} (personal research library"
     ua += f"; mailto:{email})" if email else ")"
-    return httpx.Client(headers={"User-Agent": ua}, timeout=30, follow_redirects=True)
+    return httpx.Client(headers={"User-Agent": ua}, timeout=timeout, follow_redirects=True)
 
 
 def _get(url: str, email: str = "", params: dict | None = None, retries: int = 3) -> httpx.Response | None:

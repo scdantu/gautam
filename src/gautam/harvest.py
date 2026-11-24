@@ -76,23 +76,24 @@ class Harvester:
             s += f" AND PUB_YEAR:[{self.year_from or 1900} TO {self.year_to or 2100}]"
         return s
 
-    def _get(self, url: str, params: dict | None = None):
+    def _get(self, url: str, params: dict | None = None, timeout: float = 120, tries: int = 6):
+        """Europe PMC can take a minute on big searches: wait up to `timeout`s, retry with growing pauses."""
         with self._lock:  # shared speed limit across threads
             wait = 1 / self.rate - (time.time() - self._last)
             if wait > 0:
                 time.sleep(wait)
             self._last = time.time()
-        for attempt in range(4):
+        for attempt in range(tries):
             try:
-                with scholarly._client(self.lib.cfg.email) as c:
+                with scholarly._client(self.lib.cfg.email, timeout=timeout) as c:
                     r = c.get(url, params=params)
                 if r.status_code in (429, 500, 502, 503, 504):
                     time.sleep(2 ** (attempt + 1))
                     continue
                 return r
             except Exception as e:
-                log(f"network error ({e}); retrying")
-                time.sleep(2 ** (attempt + 1))
+                log(f"network error ({e}); retry {attempt + 1}/{tries}")
+                time.sleep(min(60, 5 * 2 ** attempt))
         return None
 
     # ---------------------------------------------------------------- count
