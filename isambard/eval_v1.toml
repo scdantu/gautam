@@ -1,0 +1,10 @@
+# Score the index you built on the Mac (copied to ../data). Nothing is re-read.
+[library]
+dirs = []
+[data]
+dir = "../data"
+[embedding]
+backend = "sentence-transformers"
+model = "Qwen/Qwen3-Embedding-0.6B"
+dim = 512
+batch_size = 128

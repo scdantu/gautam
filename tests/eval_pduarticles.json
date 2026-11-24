@@ -1,0 +1,513 @@
+{
+ "about": "Known-answer questions for the 54 papers in pduarticles. 'targets' = citekeys that count as a correct paper (any of them); 'key' = a short string the retrieved passage should contain (passage-level check, case-insensitive). Questions are paraphrased so they share few exact words with the paper. type: P = paraphrase, K = names a specific term, N = nothing in the library should match. H = hard, conceptual question with no rare shared words; any listed paper counts as right.",
+ "questions": [
+  {
+   "q": "How does T4 lysozyme's structure respond when large buried side chains are truncated to alanine, and how much stability is lost?",
+   "targets": [
+    "eriksson1992response"
+   ],
+   "key": "cavity",
+   "type": "P"
+  },
+  {
+   "q": "An energy model for designing protein backbones that uses generic placeholder side chains to keep room for packing",
+   "targets": [
+    "huang2022backbone"
+   ],
+   "key": "side chain",
+   "type": "P"
+  },
+  {
+   "q": "Atomic structure of a sparsely populated, short-lived conformation of a lysozyme cavity mutant solved by NMR",
+   "targets": [
+    "bouvignies2011solution"
+   ],
+   "key": "state",
+   "type": "P"
+  },
+  {
+   "q": "Do models that include pairwise residue dependencies predict the effect of mutations better than site-independent conservation?",
+   "targets": [
+    "hopf2017mutation"
+   ],
+   "key": "epistatic",
+   "type": "P"
+  },
+  {
+   "q": "Estimating how rugged a protein's free-energy landscape is from the growth of principal-component variance with simulation length",
+   "targets": [
+    "hensen2012exploring"
+   ],
+   "key": "rugged",
+   "type": "P"
+  },
+  {
+   "q": "Classifying protein positions where substitutions produce graded, tunable changes in function rather than on/off effects",
+   "targets": [
+    "swintkruse2024rheostats"
+   ],
+   "key": "rheostat",
+   "type": "P"
+  },
+  {
+   "q": "A message-passing graph network that designs amino-acid sequences for a fixed backbone and was validated experimentally",
+   "targets": [
+    "dauparas2022robust",
+    "sumida2024improving"
+   ],
+   "key": "",
+   "type": "P"
+  },
+  {
+   "q": "Does a small vocabulary of recurring local tertiary motifs describe most known protein structures, including newly deposited ones?",
+   "targets": [
+    "mackenzie2016tertiary"
+   ],
+   "key": "TERM",
+   "type": "P"
+  },
+  {
+   "q": "Computationally designed artificial enzymes that carry out light-driven reactions with high enantioselectivity",
+   "targets": [
+    "mishra2026de"
+   ],
+   "key": "",
+   "type": "P"
+  },
+  {
+   "q": "Representing a chaotic system as a linear model driven by an intermittent forcing term built from time-delay coordinates",
+   "targets": [
+    "brunton2017chaos"
+   ],
+   "key": "HAVOK",
+   "type": "P"
+  },
+  {
+   "q": "Comparing allosteric communication networks from simulations using distances between graph spectra",
+   "targets": [
+    "shi2026measuring"
+   ],
+   "key": "",
+   "type": "P"
+  },
+  {
+   "q": "Finding druggable pockets on RNA by running simulations with small probe molecules over conformational ensembles",
+   "targets": [
+    "panei2024identifying"
+   ],
+   "key": "",
+   "type": "P"
+  },
+  {
+   "q": "Improving soluble yield and heat tolerance of a viral protease and myoglobin by redesigning their sequences with deep learning",
+   "targets": [
+    "sumida2024improving"
+   ],
+   "key": "",
+   "type": "P"
+  },
+  {
+   "q": "A molecular motor in which a GTPase cycle drives the entropic collapse of a tethering protein, measured with optical tweezers",
+   "targets": [
+    "singh2023two"
+   ],
+   "key": "",
+   "type": "P"
+  },
+  {
+   "q": "NMR saturation-transfer experiments that reveal invisible minor states on a protein's free-energy surface",
+   "targets": [
+    "tiwari2026using"
+   ],
+   "key": "CEST",
+   "type": "P"
+  },
+  {
+   "q": "Designing binders for intrinsically disordered regions by threading peptide segments onto a library of scaffold backbones",
+   "targets": [
+    "wu2025design"
+   ],
+   "key": "",
+   "type": "P"
+  },
+  {
+   "q": "An evolutionary trace method extended with covariation that finds functional residue networks such as the allosteric pathway in GPCRs",
+   "targets": [
+    "konecki2023covet"
+   ],
+   "key": "",
+   "type": "P"
+  },
+  {
+   "q": "Predicting which protein variants lose function for reasons other than reduced stability, by combining predicted stability changes with conservation",
+   "targets": [
+    "cagiada2023discovering"
+   ],
+   "key": "",
+   "type": "P"
+  },
+  {
+   "q": "Predicting stability changes of point mutations from statistics of local structural motifs, benchmarked against Rosetta",
+   "targets": [
+    "zheng2017sequence",
+    "anon2013mining"
+   ],
+   "key": "",
+   "type": "P"
+  },
+  {
+   "q": "A diffusion-based generative model of proteins that can be steered by symmetry, shape or substructure constraints",
+   "targets": [
+    "ingraham2023illuminating"
+   ],
+   "key": "",
+   "type": "P"
+  },
+  {
+   "q": "Splitting proteins into domains using patterns of coevolving residues and comparing them with domains that move together",
+   "targets": [
+    "granata2017patterns"
+   ],
+   "key": "",
+   "type": "P"
+  },
+  {
+   "q": "Generating molecular dynamics trajectories with a neural network that predicts the next frame without computing forces",
+   "targets": [
+    "thiemann2026force"
+   ],
+   "key": "",
+   "type": "P"
+  },
+  {
+   "q": "Protein segments reused across different folds that carry similar functional motions",
+   "targets": [
+    "kutlu2024reused"
+   ],
+   "key": "",
+   "type": "P"
+  },
+  {
+   "q": "Mathematical proof that nearly decomposable stochastic systems equilibrate quickly within blocks before mixing slowly between them",
+   "targets": [
+    "anonndproof",
+    "anonndcomplexity"
+   ],
+   "key": "",
+   "type": "P"
+  },
+  {
+   "q": "Generating all-atom protein dynamics with a diffusion model trained in a learned latent space of MD trajectories",
+   "targets": [
+    "anonndbeyond"
+   ],
+   "key": "",
+   "type": "P"
+  },
+  {
+   "q": "Are catalytic residues suboptimal for stability, so that replacing them stabilises the enzyme?",
+   "targets": [
+    "anonndrelationship"
+   ],
+   "key": "",
+   "type": "P"
+  },
+  {
+   "q": "Identifying residue contacts between interacting bacterial signalling proteins from coevolution in their sequences",
+   "targets": [
+    "anonndidentification"
+   ],
+   "key": "",
+   "type": "P"
+  },
+  {
+   "q": "Improving ligand pose prediction by docking fragments and combining them with graph theory",
+   "targets": [
+    "sarfaraz2020combining"
+   ],
+   "key": "",
+   "type": "P"
+  },
+  {
+   "q": "Review of how side-chain rearrangements drive the conformational changes that switch enzymes on",
+   "targets": [
+    "hegazy2025role"
+   ],
+   "key": "",
+   "type": "P"
+  },
+  {
+   "q": "Learning governing equations from the latent dynamics of a system with a multi-view, multi-horizon objective",
+   "targets": [
+    "anonndextracting"
+   ],
+   "key": "",
+   "type": "P"
+  },
+  {
+   "q": "MISTIC2 web server",
+   "targets": [
+    "colell2018mistic2"
+   ],
+   "key": "MISTIC",
+   "type": "K"
+  },
+  {
+   "q": "Simon-Ando theorem nearly completely decomposable",
+   "targets": [
+    "anonndproof",
+    "anonndcomplexity"
+   ],
+   "key": "",
+   "type": "K"
+  },
+  {
+   "q": "Glu-11 catalytic residue stability lysozyme",
+   "targets": [
+    "anonndrelationship"
+   ],
+   "key": "Glu",
+   "type": "K"
+  },
+  {
+   "q": "dynasome",
+   "targets": [
+    "hensen2012exploring"
+   ],
+   "key": "dynasome",
+   "type": "K"
+  },
+  {
+   "q": "TnsC filament assembly CRISPR transposon",
+   "targets": [
+    "pindi2025graph"
+   ],
+   "key": "TnsC",
+   "type": "K"
+  },
+  {
+   "q": "ProteinMPNN TEV protease myoglobin",
+   "targets": [
+    "sumida2024improving"
+   ],
+   "key": "TEV",
+   "type": "K"
+  },
+  {
+   "q": "human phosphoproteome functional landscape",
+   "targets": [
+    "ochoa2020functional"
+   ],
+   "key": "phospho",
+   "type": "K"
+  },
+  {
+   "q": "Omega-loop flexibility in class A beta-lactamases such as TEM-1",
+   "targets": [],
+   "key": "",
+   "type": "N"
+  },
+  {
+   "q": "Efficacy of malaria vaccines in young children",
+   "targets": [],
+   "key": "",
+   "type": "N"
+  },
+  {
+   "q": "Loop 6 closure dynamics in triosephosphate isomerase",
+   "targets": [],
+   "key": "",
+   "type": "N"
+  },
+  {
+   "q": "Evidence that proteins are assembled from reusable pieces that keep their characteristic motions",
+   "targets": [
+    "kutlu2024reused",
+    "ezerzer2025building",
+    "mackenzie2016tertiary"
+   ],
+   "key": "",
+   "type": "H"
+  },
+  {
+   "q": "How can rare high-energy conformations of a protein be seen experimentally?",
+   "targets": [
+    "bouvignies2011solution",
+    "tiwari2026using"
+   ],
+   "key": "",
+   "type": "H"
+  },
+  {
+   "q": "Can sequence covariation tell us which parts of a protein move together, not just which residues touch?",
+   "targets": [
+    "granata2017patterns",
+    "konecki2023covet"
+   ],
+   "key": "",
+   "type": "H"
+  },
+  {
+   "q": "Replacing physics-based simulation with learned generators of protein motion",
+   "targets": [
+    "thiemann2026force",
+    "anonndbeyond",
+    "bonollo2025advancing"
+   ],
+   "key": "",
+   "type": "H"
+  },
+  {
+   "q": "Treating nonlinear dynamics through a linear operator acting on observables",
+   "targets": [
+    "brunton2017chaos",
+    "anonndextracting"
+   ],
+   "key": "",
+   "type": "H"
+  },
+  {
+   "q": "Why do catalytic sites cost a protein stability, and what does that mean for engineering?",
+   "targets": [
+    "anonndrelationship",
+    "cagiada2023discovering",
+    "sumida2024improving"
+   ],
+   "key": "",
+   "type": "H"
+  },
+  {
+   "q": "Fast and slow time-scale separation in hierarchical systems",
+   "targets": [
+    "anonndproof",
+    "anonndcomplexity"
+   ],
+   "key": "",
+   "type": "H"
+  },
+  {
+   "q": "Biosecurity risks of generative protein design",
+   "targets": [
+    "brackmann2026protein"
+   ],
+   "key": "",
+   "type": "H"
+  },
+  {
+   "q": "Using AI agents to carry out research autonomously",
+   "targets": [
+    "lu2026towards",
+    "anonndagent",
+    "bridgeford2026twelve"
+   ],
+   "key": "",
+   "type": "H"
+  },
+  {
+   "q": "Do mutations at a single position show graded rather than all-or-nothing effects?",
+   "targets": [
+    "swintkruse2024rheostats"
+   ],
+   "key": "",
+   "type": "H"
+  },
+  {
+   "q": "Network representations of residue interactions to understand signalling and allostery",
+   "targets": [
+    "shi2026measuring",
+    "konecki2023covet",
+    "pindi2025graph"
+   ],
+   "key": "",
+   "type": "H"
+  },
+  {
+   "q": "What makes a protein backbone designable?",
+   "targets": [
+    "anon2013mining",
+    "huang2022backbone",
+    "mackenzie2016tertiary",
+    "zheng2017sequence"
+   ],
+   "key": "",
+   "type": "H"
+  },
+  {
+   "q": "A catalogue comparing the motions of many different proteins",
+   "targets": [
+    "hensen2012exploring"
+   ],
+   "key": "",
+   "type": "H"
+  },
+  {
+   "q": "How is AI changing research in pure mathematics?",
+   "targets": [
+    "anonndmathematics"
+   ],
+   "key": "",
+   "type": "H"
+  },
+  {
+   "q": "Introductory overview of what molecular simulation can do for biologists",
+   "targets": [
+    "hollingsworth2018molecular"
+   ],
+   "key": "",
+   "type": "H"
+  },
+  {
+   "q": "Combining simulations with experimental data and machine learning",
+   "targets": [
+    "bonollo2025advancing"
+   ],
+   "key": "",
+   "type": "H"
+  }
+ ],
+ "files": {
+  "anon2013mining": "nihms470453.pdf",
+  "anonndagent": "Agent_Based_Protein_Structure_Prediction.pdf",
+  "anonndbeyond": "2509.02196v4.pdf",
+  "anonndcomplexity": "complexity-simon-62.pdf",
+  "anonndextracting": "2606.13260v1.pdf",
+  "anonndidentification": "pnas.0805923106.pdf",
+  "anonndmathematics": "2608.16753v1.pdf",
+  "anonndproof": "Proof of the Simon-Ando Theorem.pdf",
+  "anonndrelationship": "shoichet-et-al-1995-a-relationship-between-protein-stability-and-protein-function.pdf",
+  "bonollo2025advancing": "advancing-molecular-simulations-merging-physical-models-experiments-and-ai-to-tackle-multiscale-complexity.pdf",
+  "bouvignies2011solution": "nature10349.pdf",
+  "brackmann2026protein": "fmicb-17-1817535.pdf",
+  "bridgeford2026twelve": "journal.pcbi.1014428.pdf",
+  "brunton2017chaos": "s41467-017-00030-8.pdf",
+  "cagiada2023discovering": "s41467-023-39909-0.pdf",
+  "colell2018mistic2": "gky419.pdf",
+  "dauparas2022robust": "Dauparas_etal_Science2022_Sequence_design_via_ProteinMPNN.pdf",
+  "eriksson1992response": "science.1553543.pdf",
+  "ezerzer2025building": "1-s2.0-S0959440X25000144-main.pdf",
+  "granata2017patterns": "granata-et-al-2017-patterns-of-coevolving-amino-acids-unveil-structural-and-dynamical-domains.pdf",
+  "hegazy2025role": "the-role-of-protein-side-chains-in-enzyme-activating-conformational-changes-lessons-from-studies-on-variant-enzymes.pdf",
+  "hensen2012exploring": "Dynosome.pdf",
+  "hollingsworth2018molecular": "MDreview2018.pdf",
+  "hopf2017mutation": "nbt.3769.pdf",
+  "huang2022backbone": "s41586-021-04383-5.pdf",
+  "ingraham2023illuminating": "s41586-023-06728-8.pdf",
+  "konecki2023covet": "CoVET.pdf",
+  "kutlu2024reused": "msae184.pdf",
+  "lu2026towards": "s41586-026-10265-5.pdf",
+  "mackenzie2016tertiary": "mackenzie-et-al-tertiary-alphabet-for-the-observable-protein-structural-universe.pdf",
+  "mishra2026de": "s41586-026-11317-6_reference.pdf",
+  "ochoa2020functional": "s41587-019-0344-3.pdf",
+  "panei2024identifying": "s41467-024-49638-7.pdf",
+  "pindi2025graph": "2025.06.17.659969v1.full.pdf",
+  "sarfaraz2020combining": "s10822-020-00345-7.pdf",
+  "shi2026measuring": "measuring-differences-in-protein-allosteric-graphs-constructed-via-molecular-dynamics-simulations.pdf",
+  "singh2023two": "s41567-023-02009-3.pdf",
+  "sumida2024improving": "ja3c10941.pdf",
+  "swintkruse2024rheostats": "RheostatReview_LSK2024.pdf",
+  "thiemann2026force": "s42256-026-01227-7.pdf",
+  "tiwari2026using": "1-s2.0-S0021925825028418-main.pdf",
+  "wu2025design": "science.adr8063.pdf",
+  "zheng2017sequence": "MotifStatisticsGGregoryan.pdf"
+ }
+}

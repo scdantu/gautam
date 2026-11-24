@@ -1,0 +1,34 @@
+# Project Gautam settings. Copy this file to gautam.toml and edit.
+# Relative paths are relative to the folder that holds gautam.toml.
+
+[library]
+# Folders holding your PDFs (searched recursively). Add as many as you like.
+dirs = [
+  # "~/Library/CloudStorage/OneDrive-BrunelUniversityLondon/Papers",
+]
+# Drop new PDFs here (fetched or downloaded by hand); they are indexed too.
+inbox = "inbox"
+
+[data]
+# The index (one SQLite file), summaries and exported .bib files live here.
+# Keep this OUTSIDE OneDrive/Google Drive so syncing cannot corrupt the database.
+dir = "data"
+
+[embedding]
+# "sentence-transformers" (real model) or "hash" (tiny offline stand-in for testing only)
+backend = "sentence-transformers"
+model = "Qwen/Qwen3-Embedding-0.6B"
+# Length of each meaning fingerprint. Qwen3 allows cutting 1024 down; 512 halves disk use with little loss.
+dim = 512
+# "auto" picks the Mac GPU (mps) when available
+device = "auto"
+batch_size = 8
+
+[contact]
+# Crossref and Unpaywall ask for an email so they can contact you if something goes wrong.
+email = ""
+
+[library_proxy]
+# Brunel library proxy prefix for paywalled papers, e.g. "https://<your-proxy>/login?url="
+# Leave empty to list plain doi.org links instead.
+prefix = ""

@@ -1,0 +1,27 @@
+# never commit papers: copyrighted, and large
+*.pdf
+articles/
+pduarticles/
+pdfs/
+inbox/
+inbox_v2/
+# your library and settings
+data/
+data_v2/
+data_isambard/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+vectors*.npy
+gautam.toml
+gautam_v2.toml
+# environments, model cache, job logs
+.venv/
+.venv-isambard/
+.hf/
+gautam-*.out
+slurm-*.out
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store

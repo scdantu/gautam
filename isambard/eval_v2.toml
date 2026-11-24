@@ -1,0 +1,13 @@
+# Rebuild the index from ../pduarticles with the new PDF reader, into ../data_v2, then score it.
+[library]
+dirs = ["../pduarticles"]
+inbox = "../inbox_v2"
+[data]
+dir = "../data_v2"
+[embedding]
+backend = "sentence-transformers"
+model = "Qwen/Qwen3-Embedding-0.6B"
+dim = 512
+batch_size = 128
+[contact]
+email = ""

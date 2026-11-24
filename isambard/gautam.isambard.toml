@@ -1,0 +1,33 @@
+# Project Gautam settings for Isambard-AI (used by run.sbatch). Paths are relative to this isambard/ folder.
+# model and dim MUST match your Mac's gautam.toml, or the Mac cannot search the result.
+
+[library]
+dirs = ["../pdfs"]       # rsync your PDFs into <gautam folder>/pdfs
+inbox = "../inbox"
+
+[data]
+dir = "../data_isambard"
+
+[embedding]
+backend = "sentence-transformers"
+model = "Qwen/Qwen3-Embedding-0.6B"
+dim = 512
+device = "auto"          # picks the H100 (cuda)
+batch_size = 128         # the H100 has 96 GB; drop to 64 if you see "out of memory"
+
+[contact]
+email = ""               # put your Brunel email here (Crossref / Europe PMC etiquette)
+
+[harvest]
+# Europe PMC fields: TITLE_ABS = title + abstract (recommended). Leave topics out to use the built-in list:
+# protein dynamics, MD of enzymes, enzyme dynamics, allostery, conformational ensembles, beta-lactamase
+# dynamics, TIM barrel, coevolution, Koopman/MSM, coarse-graining, protein language models, protein design,
+# intrinsically disordered proteins, Skp1, SCF complex.
+field = "TITLE_ABS"
+# year_from = 2000
+requests_per_second = 8
+
+# To edit the topics, uncomment and change this table (name = Europe PMC query):
+# [harvest.topics]
+# "Skp1" = 'Skp1 OR SKP1'
+# "protein design" = '"protein design" OR "de novo protein"'
