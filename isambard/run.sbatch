@@ -16,29 +16,37 @@ source "$G/.venv-isambard/bin/activate"
 
 python -c "import torch; assert torch.cuda.is_available(), 'No GPU visible'; print('GPU:', torch.cuda.get_device_name(0))" || exit 1
 
-NET=0
-curl -s -m 15 -o /dev/null "https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=protein&format=json&pageSize=1" && NET=1
-echo "Internet from compute node: $NET"
+# Which outside services can this node reach? (Isambard compute nodes reach some sites, not others.)
+ok() { curl -s -o /dev/null -m 30 -w "%{http_code}" "$1" | grep -q "^2"; }
+ok "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/einfo.fcgi" && NCBI=1 || NCBI=0
+ok "https://api.crossref.org/works?rows=0" && CROSSREF=1 || CROSSREF=0
+ok "https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=protein&format=json&pageSize=1" && EPMC=1 || EPMC=0
+echo "Reachable from this node: NCBI=$NCBI Crossref=$CROSSREF EuropePMC=$EPMC"
 
-echo "=== 1. read your PDFs (64 at a time) ==="
 export GAUTAM_CONFIG="$G/isambard/gautam.isambard.toml"
+echo "=== 1. read your PDFs (64 at a time) ==="
 gautam index --stage read --workers 64
 
-if [ "$NET" = 1 ]; then
+if [ "$CROSSREF" = 1 ]; then
   echo "=== 2. Crossref details for your PDFs ==="
   gautam index --stage meta
-  echo "=== 3. harvest open-access papers for your topics ==="
-  gautam harvest collect
-  gautam harvest fetch
-  gautam harvest fetch --source epmc   # whatever NCBI did not serve
 else
-  echo "!!! No internet on this node. Downloads happen outside the job (see isambard/README.md, 'No internet'):"
-  echo "    login node:  gautam harvest download --to harvest_xml   (network only, light)"
-  echo "    then resubmit this job; it ingests harvest_xml/ and fingerprints."
+  echo "(skipping Crossref: not reachable here; run 'gautam index --stage meta' on the login node later)"
+fi
+
+if [ "$EPMC" = 1 ]; then
+  echo "=== 3a. list open-access papers for your topics (Europe PMC search) ==="
+  gautam harvest collect
+fi
+
+if [ "$NCBI" = 1 ] || [ "$EPMC" = 1 ]; then
+  SRC=both; [ "$EPMC" = 1 ] || SRC=ncbi; [ "$NCBI" = 1 ] || SRC=epmc
+  echo "=== 3b. download full text ($SRC) into harvest_xml/ ==="
+  gautam harvest download --to harvest_xml --source "$SRC"
 fi
 
 if [ -d harvest_xml ]; then
-  echo "=== 3b. read downloaded papers (harvest_xml/) into the library ==="
+  echo "=== 3c. read downloaded papers (harvest_xml/) into the library ==="
   gautam harvest ingest --from harvest_xml
 fi
 

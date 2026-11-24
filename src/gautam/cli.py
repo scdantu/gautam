@@ -45,8 +45,9 @@ def main(argv=None) -> None:
     p.add_argument("--ids", help="file with PMC IDs to download (from `harvest todo`); default: ask the library")
     p.add_argument("--out", default="harvest_todo.txt", help="file for `harvest todo`")
     p.add_argument("--workers", type=int, help="parallel downloads (fetch): default 3 for ncbi, 8 for epmc")
-    p.add_argument("--source", choices=["ncbi", "epmc"], default="ncbi",
-                   help="fetch from NCBI PMC in batches of 100 (fast, default) or Europe PMC one by one")
+    p.add_argument("--source", choices=["both", "ncbi", "epmc"],
+                   help="fetch: ncbi (default, batches of 100) or epmc (one by one). "
+                        "download: both (default: NCBI, then Europe PMC for the rest), ncbi or epmc only")
     p.add_argument("--limit", type=int, help="at most this many papers (fetch) or per topic (collect)")
     p = sub.add_parser("refresh", help="fill in/re-check paper details from Crossref")
     p.add_argument("--all", action="store_true", help="re-check every paper (catches new retractions)")
@@ -114,12 +115,11 @@ def main(argv=None) -> None:
             print(f"{len(ids)} IDs written to {a.out}")
         elif a.step == "download":
             ids = Path(a.ids).read_text().split() if a.ids else None
-            src = {"ncbi": "ncbi", "epmc": "epmc"}.get(a.source, "both") if a.source != "ncbi" else "both"
-            print(json.dumps(H.download(a.to, ids=ids, source=src, workers=a.workers or 3), indent=2))
+            print(json.dumps(H.download(a.to, ids=ids, source=a.source or "both", workers=a.workers or 3), indent=2))
         elif a.step == "ingest":
             print(json.dumps(H.ingest(a.src), indent=2))
         else:
-            if a.source == "ncbi":
+            if a.source in (None, "ncbi", "both"):
                 print(json.dumps(H.fetch_ncbi(workers=a.workers or 3, limit=a.limit), indent=2))
             else:
                 print(json.dumps(H.fetch(workers=a.workers or 8, limit=a.limit), indent=2))
