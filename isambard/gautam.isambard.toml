@@ -26,6 +26,8 @@ email = ""               # put your Brunel email here (Crossref / Europe PMC eti
 field = "TITLE_ABS"
 # year_from = 2000
 requests_per_second = 8
+# Optional: a free NCBI API key (ncbi.nlm.nih.gov/account) lifts NCBI's limit from 3 to 10 requests/s
+# ncbi_api_key = ""
 
 # To edit the topics, uncomment and change this table (name = Europe PMC query):
 # [harvest.topics]

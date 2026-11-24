@@ -198,3 +198,27 @@ def test_doi_duplicates_and_archive_relink(lib, tmp_path):
     shutil.move(str(moved), str(d))   # PDFs reappear (e.g. on the Mac) -> re-linked, not re-read
     r = L.update()
     assert not r.added and len(r.moved) == 2
+
+
+def test_harvest_ncbi_batches(lib, monkeypatch):
+    from gautam import harvest, scholarly as sch
+    L, _ = lib
+    H = harvest.Harvester(L)
+    art = JATS.split(b"?>", 1)[1].replace(b"<article-meta>", b'<article-meta><article-id pub-id-type="pmc">111</article-id>')
+    xml = b"<pmc-articleset>" + art + b"</pmc-articleset>"
+    assert list(harvest.split_pmc_articleset(xml)) == ["111"]
+    H.db.execute("INSERT INTO candidates (pmcid, doi, title, year, topics) VALUES ('PMC111','10.1371/journal.pcbi.000001','x',2021,'Skp1')")
+    H.db.execute("INSERT INTO candidates (pmcid, doi, title, year, topics) VALUES ('PMC222',NULL,'not served',2020,'Skp1')")
+
+    class R:
+        status_code = 200
+        content = xml
+
+    class C:
+        def __init__(s, *a, **k): pass
+        def __enter__(s): return s
+        def __exit__(s, *a): pass
+        def post(s, url, data): assert "111" in data["id"] and "222" in data["id"]; return R()
+    monkeypatch.setattr(sch, "_client", lambda *a, **k: C())
+    r = H.fetch_ncbi()
+    assert r["stored"] == 1 and r["still_todo"] == 1

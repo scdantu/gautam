@@ -150,7 +150,80 @@ class Harvester:
         todo = self.db.execute("SELECT count(*) FROM candidates WHERE status='todo'").fetchone()[0]
         return {"new_candidates": added, "total_unique": total, "to_fetch": todo}
 
-    # ---------------------------------------------------------------- fetch
+    # ---------------------------------------------------------------- fetch (NCBI PMC, in batches)
+    NCBI = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
+
+    def fetch_ncbi(self, batch: int = 100, workers: int = 3, limit: int | None = None) -> dict:
+        """Full text from PubMed Central via NCBI E-utilities: ~100 papers per request instead of one.
+        NCBI allows 3 requests/s without a key, 10/s with [harvest] ncbi_api_key. Papers NCBI does not
+        return stay 'todo' for the Europe PMC route (`gautam harvest fetch --source epmc`)."""
+        h = self.lib.cfg.raw.get("harvest", {})
+        key = h.get("ncbi_api_key", "")
+        rate = 9.0 if key else 2.5
+        rows = self.db.execute("SELECT * FROM candidates WHERE status IN ('todo','failed') ORDER BY year DESC"
+                               + (f" LIMIT {int(limit)}" if limit else "")).fetchall()
+        todo, dup = [], 0
+        for row in rows:
+            if row["doi"] and self.lib.store.paper_by_doi(row["doi"]):
+                self._status(row["pmcid"], "skipped_duplicate")
+                dup += 1
+            else:
+                todo.append(row)
+        batches = [todo[i:i + batch] for i in range(0, len(todo), batch)]
+        log(f"harvest (NCBI): {len(todo)} papers in {len(batches)} requests of {batch}; {dup} already in library")
+        prog = Progress("harvest fetch (NCBI)", len(todo), "papers")
+        lock, last = threading.Lock(), [0.0]
+
+        def get(ids: list[str]):
+            data = {"db": "pmc", "id": ",".join(i.upper().removeprefix("PMC") for i in ids), "retmode": "xml",
+                    "tool": "gautam", "email": self.lib.cfg.email or ""}
+            if key:
+                data["api_key"] = key
+            for attempt in range(6):
+                with lock:  # NCBI's per-second limit, shared by all threads
+                    w = 1 / rate - (time.time() - last[0])
+                    if w > 0:
+                        time.sleep(w)
+                    last[0] = time.time()
+                try:
+                    with scholarly._client(self.lib.cfg.email, timeout=300) as c:
+                        r = c.post(self.NCBI, data=data)
+                    if r.status_code == 200 and b"<" in r.content[:200]:
+                        return split_pmc_articleset(r.content)
+                    log(f"NCBI said {r.status_code}; retry {attempt + 1}/6")
+                except Exception as e:
+                    log(f"NCBI network error ({e}); retry {attempt + 1}/6")
+                time.sleep(min(60, 5 * 2 ** attempt))
+            return None
+
+        got = fail = 0
+        with ThreadPoolExecutor(max_workers=workers) as tp:  # downloads in threads; database writes here
+            futs = {tp.submit(get, [r["pmcid"] for r in b]): b for b in batches}
+            for f in as_completed(futs):
+                b, arts = futs[f], f.result()
+                if arts is None:
+                    prog.step(len(b), item="request failed; these stay queued")
+                    continue
+                for row in b:
+                    xml = arts.get(row["pmcid"].upper().removeprefix("PMC"))
+                    if xml is None:
+                        continue  # not served by NCBI: stays 'todo' for the Europe PMC route
+                    try:
+                        self._store(row, xml)
+                        self._status(row["pmcid"], "done")
+                        got += 1
+                    except Exception as e:
+                        self._status(row["pmcid"], "failed")
+                        fail += 1
+                        if "duplicate" not in str(e):
+                            log(f"failed {row['pmcid']}: {e}")
+                prog.step(len(b), item=b[-1]["title"] or "")
+        left = self.db.execute("SELECT count(*) FROM candidates WHERE status='todo'").fetchone()[0]
+        return {"stored": got, "already_in_library": dup, "failed": fail, "still_todo": left,
+                "next": "run `gautam index --stage embed` to fingerprint them"
+                        + (f"; {left} not served by NCBI can be tried with --source epmc" if left else "")}
+
+    # ---------------------------------------------------------------- fetch (Europe PMC, one by one)
     def fetch(self, workers: int = 8, limit: int | None = None) -> dict:
         rows = self.db.execute("SELECT * FROM candidates WHERE status='todo' ORDER BY year DESC"
                                + (f" LIMIT {int(limit)}" if limit else "")).fetchall()
@@ -209,6 +282,27 @@ class Harvester:
 
 
 # -------------------------------------------------------------------- JATS XML -> passages
+def split_pmc_articleset(xml: bytes) -> dict[str, bytes]:
+    """NCBI returns <pmc-articleset><article>...</article>...</pmc-articleset>; key each article by its PMC number."""
+    root = ET.fromstring(xml)
+    out = {}
+    for art in root.iter():
+        if not (isinstance(art.tag, str) and art.tag.split("}")[-1] == "article"):
+            continue
+        pmc = None
+        for aid in art.iter():
+            if isinstance(aid.tag, str) and aid.tag.split("}")[-1] == "article-id" and \
+                    aid.get("pub-id-type") in ("pmc", "pmcid", "pmcaid"):
+                t = (aid.text or "").strip().upper().removeprefix("PMC")
+                if t.isdigit():
+                    pmc = t
+                    break
+        if pmc:
+            out[pmc] = ET.tostring(art)
+    return out
+
+
+
 def _txt(el) -> str:
     if el is None:
         return ""

@@ -36,7 +36,9 @@ def main(argv=None) -> None:
     sub.add_parser("archive", help="keep papers' text but stop tracking their PDFs (then the PDFs can be deleted)")
     p = sub.add_parser("harvest", help="open-access full text from Europe PMC for your topics")
     p.add_argument("step", choices=["count", "collect", "fetch"])
-    p.add_argument("--workers", type=int, default=8, help="parallel downloads (fetch)")
+    p.add_argument("--workers", type=int, help="parallel downloads (fetch): default 3 for ncbi, 8 for epmc")
+    p.add_argument("--source", choices=["ncbi", "epmc"], default="ncbi",
+                   help="fetch from NCBI PMC in batches of 100 (fast, default) or Europe PMC one by one")
     p.add_argument("--limit", type=int, help="at most this many papers (fetch) or per topic (collect)")
     p = sub.add_parser("refresh", help="fill in/re-check paper details from Crossref")
     p.add_argument("--all", action="store_true", help="re-check every paper (catches new retractions)")
@@ -99,7 +101,10 @@ def main(argv=None) -> None:
         elif a.step == "collect":
             print(json.dumps(H.collect(max_per_topic=a.limit), indent=2))
         else:
-            print(json.dumps(H.fetch(workers=a.workers, limit=a.limit), indent=2))
+            if a.source == "ncbi":
+                print(json.dumps(H.fetch_ncbi(workers=a.workers or 3, limit=a.limit), indent=2))
+            else:
+                print(json.dumps(H.fetch(workers=a.workers or 8, limit=a.limit), indent=2))
     elif a.cmd == "refresh":
         print(L.refresh_metadata(only_missing=not a.all))
 

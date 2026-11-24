@@ -29,10 +29,12 @@ if [ "$NET" = 1 ]; then
   gautam index --stage meta
   echo "=== 3. harvest open-access papers for your topics ==="
   gautam harvest collect
-  gautam harvest fetch --workers 8
+  gautam harvest fetch
+  gautam harvest fetch --source epmc   # whatever NCBI did not serve
 else
   echo "!!! No internet here. Run these on the LOGIN node instead, then resubmit this job:"
-  echo "    gautam index --stage meta && gautam harvest collect && gautam harvest fetch --workers 8"
+  echo "    gautam index --stage meta && gautam harvest collect && gautam harvest fetch
+  gautam harvest fetch --source epmc   # whatever NCBI did not serve"
 fi
 
 echo "=== 4. fingerprint everything on the H100 ==="
@@ -41,4 +43,4 @@ gautam index --stage embed
 echo "=== 5. archive: keep the text, stop tracking PDFs (safe to delete them now) ==="
 gautam archive
 gautam status
-ls -lh data/gautam.sqlite
+ls -lh data_isambard/gautam.sqlite
