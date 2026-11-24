@@ -223,6 +223,133 @@ class Harvester:
                 "next": "run `gautam index --stage embed` to fingerprint them"
                         + (f"; {left} not served by NCBI can be tried with --source epmc" if left else "")}
 
+    # ---------------------------------------------------------------- download only / ingest (split for HPC)
+    def todo_ids(self) -> list[str]:
+        """PMC IDs still to get (not done, not already in the library by DOI)."""
+        out = []
+        for row in self.db.execute("SELECT pmcid, doi FROM candidates WHERE status IN ('todo','failed')"):
+            if not (row["doi"] and self.lib.store.paper_by_doi(row["doi"])):
+                out.append(row["pmcid"])
+        return out
+
+    def download(self, dest: str, ids: list[str] | None = None, source: str = "both",
+                 batch: int = 100, workers: int = 3) -> dict:
+        """Network only: save raw full-text XML into `dest` (gzipped). No parsing, no database writes, so it is
+        light enough for a login node or a laptop. Re-running skips what is already in `dest`.
+        Then `gautam harvest ingest --from dest` (on a compute node) reads the files into the library."""
+        import gzip
+        from pathlib import Path as P
+
+        d = P(dest).expanduser()
+        d.mkdir(parents=True, exist_ok=True)
+        got_f, miss_f = d / "downloaded.txt", d / "not_served_by_ncbi.txt"
+        have = set(got_f.read_text().split()) if got_f.exists() else set()
+        missed = set(miss_f.read_text().split()) if miss_f.exists() else set()
+        ids = [i.strip().upper() for i in (ids if ids is not None else self.todo_ids()) if i.strip()]
+        want = [i for i in ids if i not in have]
+        lock = threading.Lock()
+        n_ncbi = n_epmc = 0
+        if source in ("both", "ncbi"):
+            todo = [i for i in want if i not in missed]
+            batches = [todo[k:k + batch] for k in range(0, len(todo), batch)]
+            log(f"download (NCBI): {len(todo)} papers in {len(batches)} requests -> {d}")
+            prog = Progress("download (NCBI)", len(todo), "papers")
+            key = self.lib.cfg.raw.get("harvest", {}).get("ncbi_api_key", "")
+            rate, last = (9.0 if key else 2.5), [0.0]
+
+            def one(k_ids):
+                k, b = k_ids
+                data = {"db": "pmc", "id": ",".join(i.removeprefix("PMC") for i in b), "retmode": "xml",
+                        "tool": "gautam", "email": self.lib.cfg.email or ""}
+                if key:
+                    data["api_key"] = key
+                for attempt in range(6):
+                    with lock:
+                        w = 1 / rate - (time.time() - last[0])
+                        if w > 0:
+                            time.sleep(w)
+                        last[0] = time.time()
+                    try:
+                        with scholarly._client(self.lib.cfg.email, timeout=300) as c:
+                            r = c.post(self.NCBI, data=data)
+                        if r.status_code == 200 and b"<" in r.content[:200]:
+                            return k, b, r.content
+                        log(f"NCBI said {r.status_code}; retry {attempt + 1}/6")
+                    except Exception as e:
+                        log(f"NCBI network error ({e}); retry {attempt + 1}/6")
+                    time.sleep(min(60, 5 * 2 ** attempt))
+                return k, b, None
+
+            stamp = time.strftime("%Y%m%d%H%M%S")
+            with ThreadPoolExecutor(max_workers=workers) as tp:
+                for f in as_completed([tp.submit(one, kb) for kb in enumerate(batches)]):
+                    k, b, content = f.result()
+                    if content is None:
+                        prog.step(len(b), item="request failed; re-run download to retry")
+                        continue
+                    served = set(split_pmc_articleset(content))
+                    (d / f"ncbi-{stamp}-{k:05d}.xml.gz").write_bytes(gzip.compress(content))
+                    ok = [i for i in b if i.removeprefix("PMC") in served]
+                    no = [i for i in b if i.removeprefix("PMC") not in served]
+                    with got_f.open("a") as fh:
+                        fh.write("".join(i + "\n" for i in ok))
+                    if no:
+                        with miss_f.open("a") as fh:
+                            fh.write("".join(i + "\n" for i in no))
+                        missed.update(no)
+                    n_ncbi += len(ok)
+                    prog.step(len(b), item=f"{len(ok)}/{len(b)} served")
+        if source in ("both", "epmc"):
+            rest = [i for i in want if (i in missed or source == "epmc")]
+            rest = [i for i in rest if not (d / f"epmc-{i}.xml.gz").exists()]
+            if rest:
+                log(f"download (Europe PMC, one by one): {len(rest)} papers NCBI did not serve")
+                prog = Progress("download (Europe PMC)", len(rest), "papers")
+                with ThreadPoolExecutor(max_workers=8) as tp:
+                    futs = {tp.submit(self._download, i): i for i in rest}
+                    for f in as_completed(futs):
+                        i, x = futs[f], f.result()
+                        if x is not None:
+                            (d / f"epmc-{i}.xml.gz").write_bytes(gzip.compress(x))
+                            with got_f.open("a") as fh:
+                                fh.write(i + "\n")
+                            n_epmc += 1
+                        prog.step(item=i)
+        return {"downloaded_ncbi": n_ncbi, "downloaded_epmc": n_epmc, "folder": str(d),
+                "next": f"on a compute node: gautam harvest ingest --from {d}"}
+
+    def ingest(self, src: str) -> dict:
+        """Read downloaded XML files into the library (CPU work: do this inside a job)."""
+        import gzip
+        from pathlib import Path as P
+
+        files = sorted(P(src).expanduser().glob("*.xml.gz"))
+        cand = {r["pmcid"].upper(): r for r in self.db.execute("SELECT * FROM candidates")}
+        prog = Progress("ingest", len(files), "files")
+        got = skip = fail = 0
+        for f in files:
+            try:
+                arts = split_pmc_articleset(gzip.decompress(f.read_bytes()))
+            except Exception as e:
+                log(f"unreadable {f.name}: {e}")
+                prog.step(item=f.name)
+                continue
+            for num, xml in arts.items():
+                row = cand.get("PMC" + num)
+                if row is None or row["status"] == "done":
+                    skip += 1
+                    continue
+                try:
+                    self._store(row, xml)
+                    self._status(row["pmcid"], "done")
+                    got += 1
+                except Exception as e:
+                    self._status(row["pmcid"], "skipped_duplicate" if "duplicate" in str(e) else "failed")
+                    fail += 1
+            prog.step(item=f.name)
+        left = len(self.todo_ids())
+        return {"stored": got, "skipped_already_done": skip, "failed_or_duplicate": fail, "still_todo": left}
+
     # ---------------------------------------------------------------- fetch (Europe PMC, one by one)
     def fetch(self, workers: int = 8, limit: int | None = None) -> dict:
         rows = self.db.execute("SELECT * FROM candidates WHERE status='todo' ORDER BY year DESC"

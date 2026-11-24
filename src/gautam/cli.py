@@ -5,6 +5,7 @@ import argparse
 import json
 import shutil
 import sys
+from pathlib import Path
 
 from .config import PROJECT_ROOT
 
@@ -35,7 +36,14 @@ def main(argv=None) -> None:
     p.add_argument("--modes", default="vector,keyword,hybrid")
     sub.add_parser("archive", help="keep papers' text but stop tracking their PDFs (then the PDFs can be deleted)")
     p = sub.add_parser("harvest", help="open-access full text from Europe PMC for your topics")
-    p.add_argument("step", choices=["count", "collect", "fetch"])
+    p.add_argument("step", choices=["count", "collect", "fetch", "todo", "download", "ingest"],
+                   help="count/collect/fetch as before; todo = write the list of IDs still needed; "
+                        "download = network only, saves XML files (login node or laptop); "
+                        "ingest = read those files into the library (inside a job)")
+    p.add_argument("--to", default="harvest_xml", help="folder for download")
+    p.add_argument("--from", dest="src", default="harvest_xml", help="folder for ingest")
+    p.add_argument("--ids", help="file with PMC IDs to download (from `harvest todo`); default: ask the library")
+    p.add_argument("--out", default="harvest_todo.txt", help="file for `harvest todo`")
     p.add_argument("--workers", type=int, help="parallel downloads (fetch): default 3 for ncbi, 8 for epmc")
     p.add_argument("--source", choices=["ncbi", "epmc"], default="ncbi",
                    help="fetch from NCBI PMC in batches of 100 (fast, default) or Europe PMC one by one")
@@ -100,6 +108,16 @@ def main(argv=None) -> None:
             print(f"Sum over topics: {sum(nums)} (overlaps are removed at collect, so the real total is lower)")
         elif a.step == "collect":
             print(json.dumps(H.collect(max_per_topic=a.limit), indent=2))
+        elif a.step == "todo":
+            ids = H.todo_ids()
+            Path(a.out).write_text("\n".join(ids) + "\n")
+            print(f"{len(ids)} IDs written to {a.out}")
+        elif a.step == "download":
+            ids = Path(a.ids).read_text().split() if a.ids else None
+            src = {"ncbi": "ncbi", "epmc": "epmc"}.get(a.source, "both") if a.source != "ncbi" else "both"
+            print(json.dumps(H.download(a.to, ids=ids, source=src, workers=a.workers or 3), indent=2))
+        elif a.step == "ingest":
+            print(json.dumps(H.ingest(a.src), indent=2))
         else:
             if a.source == "ncbi":
                 print(json.dumps(H.fetch_ncbi(workers=a.workers or 3, limit=a.limit), indent=2))

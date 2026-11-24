@@ -32,9 +32,14 @@ if [ "$NET" = 1 ]; then
   gautam harvest fetch
   gautam harvest fetch --source epmc   # whatever NCBI did not serve
 else
-  echo "!!! No internet here. Run these on the LOGIN node instead, then resubmit this job:"
-  echo "    gautam index --stage meta && gautam harvest collect && gautam harvest fetch
-  gautam harvest fetch --source epmc   # whatever NCBI did not serve"
+  echo "!!! No internet on this node. Downloads happen outside the job (see isambard/README.md, 'No internet'):"
+  echo "    login node:  gautam harvest download --to harvest_xml   (network only, light)"
+  echo "    then resubmit this job; it ingests harvest_xml/ and fingerprints."
+fi
+
+if [ -d harvest_xml ]; then
+  echo "=== 3b. read downloaded papers (harvest_xml/) into the library ==="
+  gautam harvest ingest --from harvest_xml
 fi
 
 echo "=== 4. fingerprint everything on the H100 ==="

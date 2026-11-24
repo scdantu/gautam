@@ -25,3 +25,7 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .DS_Store
+
+# downloaded full text (papers)
+harvest_xml/
+harvest_todo.txt

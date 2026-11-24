@@ -222,3 +222,34 @@ def test_harvest_ncbi_batches(lib, monkeypatch):
     monkeypatch.setattr(sch, "_client", lambda *a, **k: C())
     r = H.fetch_ncbi()
     assert r["stored"] == 1 and r["still_todo"] == 1
+
+
+def test_download_then_ingest(lib, monkeypatch, tmp_path):
+    from gautam import harvest, scholarly as sch
+    L, _ = lib
+    L.update()
+    H = harvest.Harvester(L)
+    art = JATS.split(b"?>", 1)[1].replace(b"<article-meta>", b'<article-meta><article-id pub-id-type="pmc">111</article-id>')
+    xml = b"<pmc-articleset>" + art + b"</pmc-articleset>"
+    for pid, doi in (("PMC111", "10.1371/journal.pcbi.000001"), ("PMC222", None), ("PMC333", "10.1000/tem1")):
+        H.db.execute("INSERT INTO candidates (pmcid, doi, title, year, topics) VALUES (?,?,?,?,?)", (pid, doi, "t", 2021, "x"))
+    assert sorted(H.todo_ids()) == ["PMC111", "PMC222"]  # PMC333 is already in the library as a PDF
+
+    class R:
+        status_code = 200
+        content = xml
+
+    class C:
+        def __init__(s, *a, **k): pass
+        def __enter__(s): return s
+        def __exit__(s, *a): pass
+        def post(s, url, data): return R()
+    monkeypatch.setattr(sch, "_client", lambda *a, **k: C())
+    monkeypatch.setattr(H, "_download", lambda pmcid: None)  # Europe PMC has nothing extra
+    d = tmp_path / "xml"
+    r = H.download(str(d))
+    assert r["downloaded_ncbi"] == 1 and (d / "not_served_by_ncbi.txt").read_text().split() == ["PMC222"]
+    assert H.download(str(d))["downloaded_ncbi"] == 0  # re-run skips what is there
+    r = H.ingest(str(d))
+    assert r["stored"] == 1 and r["still_todo"] == 1
+    assert H.ingest(str(d))["stored"] == 0  # ingesting twice is harmless

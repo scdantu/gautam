@@ -4,10 +4,17 @@
 (fingerprinting). Your folder there: `/projects/u6wf/scdantu/Projects/gautam` (written `G` below).
 All scripts work from wherever the folder is. Submit jobs from inside it.
 
-## 1. Copy (from your Mac)
+## 1. Get the code, then copy the papers (code via GitHub, papers via rsync)
+On Isambard (first time; afterwards just `git pull` inside the folder):
 ```
-rsync -av --exclude '.venv' --exclude 'data_v2' --exclude '__pycache__' \
-  ~/Projects/vsprojects/gautam/  isambard:/projects/u6wf/scdantu/Projects/gautam/
+cd /projects/u6wf/scdantu/Projects && git clone https://github.com/scdantu/gautam.git
+```
+If the repo is private, clone with a GitHub personal access token or an SSH key added on Isambard.
+
+From your Mac, copy what git deliberately leaves out (papers and your current index):
+```
+rsync -av ~/Projects/vsprojects/gautam/pduarticles/  isambard:/projects/u6wf/scdantu/Projects/gautam/pduarticles/
+rsync -av ~/Projects/vsprojects/gautam/data/gautam.sqlite  isambard:/projects/u6wf/scdantu/Projects/gautam/data/
 ```
 (Use the SSH host name `clifton ssh-config write` gave you, if it isn't `isambard`.)
 
