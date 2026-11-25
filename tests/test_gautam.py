@@ -253,3 +253,30 @@ def test_download_then_ingest(lib, monkeypatch, tmp_path):
     r = H.ingest(str(d))
     assert r["stored"] == 1 and r["still_todo"] == 1
     assert H.ingest(str(d))["stored"] == 0  # ingesting twice is harmless
+
+
+def test_abstracts_and_fulltext_replaces_abstract(lib):
+    from gautam import harvest
+    L, _ = lib
+    H = harvest.Harvester(L)
+    rec = {"pmid": "999", "doi": "10.1371/journal.pcbi.000001", "title": "Skp1 dynamics in the SCF complex",
+           "abstractText": "<p>Skp1 links F-box proteins to Cul1; its C-terminus is disordered and dynamic.</p>",
+           "authorList": {"author": [{"lastName": "Dantu", "firstName": "Sarath"}]}, "pubYear": "2021",
+           "journalInfo": {"journal": {"title": "PLoS Comput Biol"}}}
+    assert H._store_abstract(rec, "Skp1") == 1 and H._store_abstract(rec, "Skp1") == 0  # no duplicates
+    H.db.commit()
+    p = L.store.paper_by_doi("10.1371/journal.pcbi.000001")
+    assert p["type"] == "abstract" and not L.store.has_fulltext(p["doi"])
+    L.update()
+    assert L.search("Skp1 disordered C-terminus F-box")[0]["abstract_only"]
+    # the full text arrives later: it replaces the abstract
+    H.db.execute("INSERT INTO candidates (pmcid, doi, title, year, topics) VALUES ('PMC1','10.1371/journal.pcbi.000001','x',2021,'Skp1')")
+    assert H.todo_ids() == ["PMC1"]
+    H._store(H.db.execute("SELECT * FROM candidates WHERE pmcid='PMC1'").fetchone(), JATS)
+    p = L.store.paper_by_doi("10.1371/journal.pcbi.000001")
+    assert p["type"] != "abstract" and L.store.has_fulltext(p["doi"])
+    assert 'PUB_TYPE:"review"' in H._query("x", reviews=True) and "OPEN_ACCESS:y" in H._query("x", reviews=True)
+    sets = H._sets("all")
+    assert any(n == "author: Lewis Kay" and raw for n, q, rev, raw in sets)
+    assert H._query('AUTH:"Kay LE"', raw=True).startswith('(AUTH:"Kay LE")')
+    assert "OPEN_ACCESS" not in H._query("x", scope="all")

@@ -18,7 +18,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from . import scholarly
 from .bib import make_citekey
 from .library import Library, Progress, log
-from .pdftext import Block, make_chunks
+from .pdftext import Block, Chunk, make_chunks
 
 EPMC = "https://www.ebi.ac.uk/europepmc/webservices/rest"
 
@@ -38,6 +38,79 @@ DEFAULT_TOPICS = {
     "intrinsically disordered proteins": '"intrinsically disordered" OR "disordered protein" OR "disordered region"',
     "Skp1": "Skp1 OR SKP1",
     "SCF complex": '"SCF complex" OR "SCF ubiquitin ligase" OR "Skp1-Cul1-F-box" OR "SCF E3"',
+    # --- added: NMR, kinetics, stability, and neighbouring methods/ideas from Sarath's work
+    "NMR protein dynamics": '(NMR OR "nuclear magnetic resonance") AND protein AND (dynamics OR relaxation OR '
+                            '"relaxation dispersion" OR CPMG OR CEST OR "order parameter" OR "chemical exchange")',
+    "hydrogen exchange": '("hydrogen exchange" OR "hydrogen-deuterium exchange" OR HDX) AND protein',
+    "enzyme kinetics": '("enzyme kinetics" OR "steady-state kinetics" OR "pre-steady-state" OR "Michaelis-Menten" '
+                       'OR kcat OR "single-molecule enzymology") AND (enzyme OR protein)',
+    "protein stability": '("protein stability" OR thermostability OR "thermodynamic stability" OR "folding stability" '
+                         'OR "stability change" OR ddG) AND (protein OR mutation OR mutant)',
+    "conformational substates & loops": '"conformational substates" OR "conformational substate" OR '
+                                        '("loop dynamics" AND protein) OR ("active-site loop" AND enzyme) OR "lid closure"',
+    "conformational selection": '"conformational selection" OR ("induced fit" AND protein) OR "population shift"',
+    "free energy landscape": '("free energy landscape" OR "energy landscape") AND protein',
+    "enhanced sampling": '(metadynamics OR "replica exchange" OR "umbrella sampling" OR "accelerated molecular dynamics" '
+                         'OR "enhanced sampling") AND protein',
+    "essential dynamics & normal modes": '("essential dynamics" OR "principal component analysis" OR "normal mode analysis" '
+                                         'OR "elastic network" OR "Gaussian network model") AND protein',
+    "residue networks & communities": '("residue interaction network" OR "dynamical network" OR "community analysis" OR '
+                                      '"dynamic network analysis" OR "correlated motions") AND protein',
+    "protein hydration": '("protein hydration" OR "hydration shell" OR "water dynamics" OR "inhomogeneous fluid solvation" '
+                         'OR GIST) AND protein',
+    "epistasis & mutational scanning": '(epistasis OR "deep mutational scanning" OR "mutational scanning" OR '
+                                       '"fitness landscape") AND protein',
+    "ancestral reconstruction": '"ancestral sequence reconstruction" OR "ancestral protein" OR "resurrected ancestral"',
+    "beta-lactamase evolution": '("beta-lactamase" OR "β-lactamase" OR TEM-1 OR CTX-M OR KPC OR "metallo-beta-lactamase") '
+                                'AND (evolution OR mutation OR mechanism OR "omega loop" OR "Ω-loop" OR resistance)',
+    "structure prediction ensembles": '(AlphaFold OR "structure prediction") AND (ensemble OR ensembles OR '
+                                      '"conformational diversity" OR "alternative conformations" OR "multiple states")',
+    "time-resolved & ensemble structure": '"time-resolved crystallography" OR "room-temperature crystallography" OR '
+                                          '"multi-temperature crystallography" OR ("cryo-EM" AND (heterogeneity OR '
+                                          '"conformational landscape")) OR ("single-molecule FRET" AND dynamics)',
+    "cryptic pockets & binding kinetics": '"cryptic pocket" OR "cryptic pockets" OR "residence time" OR '
+                                          '("binding kinetics" AND protein) OR ("ligand unbinding" AND simulation)',
+    "force fields": '("force field" OR "force fields") AND (protein OR "molecular dynamics") AND '
+                    '(accuracy OR parameterization OR benchmark OR "disordered")',
+    "protein modularity": '("structural motifs" OR "protein modularity" OR "modular proteins" OR "building blocks" OR '
+                          '"tertiary motifs") AND protein',
+}
+
+# Broad themes for open-access REVIEW articles: wider than the keyword topics, because a review's value is
+# its overview and its reference list (which feeds the citation graph).
+DEFAULT_REVIEW_TOPICS = {
+    "review: protein dynamics": '"protein dynamics" OR "conformational dynamics" OR "protein motions"',
+    "review: energy landscapes": '"energy landscape" OR "conformational ensemble" OR "conformational selection"',
+    "review: allostery": "allostery OR allosteric",
+    "review: enzyme catalysis": '(enzyme OR enzymes) AND (catalysis OR mechanism OR dynamics OR evolution)',
+    "review: biomolecular simulation": '"molecular dynamics" OR "molecular simulation" OR "enhanced sampling" OR "coarse-grained"',
+    "review: NMR of proteins": '(NMR OR "nuclear magnetic resonance") AND (protein OR proteins)',
+    "review: protein evolution": '"protein evolution" OR coevolution OR "evolutionary dynamics" OR "ancestral"',
+    "review: protein design & ML": '"protein design" OR "protein language model" OR ("deep learning" AND protein)',
+    "review: disordered proteins": '"intrinsically disordered" OR "disordered protein" OR "phase separation"',
+    "review: ubiquitin & SCF": '"ubiquitin ligase" OR "SCF" OR "cullin" OR Skp1 OR "F-box"',
+    "review: folding & stability": '"protein folding" OR "protein stability" OR "misfolding"',
+    "review: kinetic models": '"Markov state model" OR Koopman OR "transfer operator" OR "kinetic model"',
+}
+
+# Key people. Queries are raw Europe PMC syntax. Common names are pinned to an institution (AFF) or a subject,
+# because "Baker D" or "Kern D" alone matches thousands of unrelated people.
+_BIO = "(protein OR proteins OR enzyme OR enzymes OR NMR OR molecular OR folding OR dynamics)"
+DEFAULT_AUTHORS = {
+    "Andrei Lupas": 'AUTH:"Lupas AN"',
+    "Helmut Grubmüller": '(AUTH:"Grubmüller H" OR AUTH:"Grubmuller H")',
+    "Lewis Kay": f'AUTH:"Kay LE" AND (AFF:"Toronto" OR TITLE_ABS:{_BIO})',
+    "Dorothee Kern": 'AUTH:"Kern D" AND (AFF:"Brandeis" OR AFF:"Howard Hughes")',
+    "Hans Frauenfelder": 'AUTH:"Frauenfelder H"',
+    "Rik Wierenga": 'AUTH:"Wierenga RK"',
+    "Martin Karplus": f'AUTH:"Karplus M" AND TITLE_ABS:{_BIO}',
+    "Arieh Warshel": 'AUTH:"Warshel A"',
+    "Alessandro Pandini": 'AUTH:"Pandini A"',
+    "Liskin Swint-Kruse": 'AUTH:"Swint-Kruse L"',
+    "David Baker": 'AUTH:"Baker D" AND (AFF:"University of Washington" OR AFF:"Institute for Protein Design")',
+    "Frances Arnold": 'AUTH:"Arnold FH"',
+    "Debora Marks": 'AUTH:"Marks DS" AND (AFF:"Harvard" OR TITLE_ABS:(protein OR evolution OR sequence OR variant))',
+    "Faruck Morcos": 'AUTH:"Morcos F"',
 }
 
 CAND_SCHEMA = """
@@ -62,6 +135,8 @@ class Harvester:
         self.db.executescript(CAND_SCHEMA)
         h = lib.cfg.raw.get("harvest", {})
         self.topics: dict[str, str] = h.get("topics") or DEFAULT_TOPICS
+        self.review_topics: dict[str, str] = h.get("review_topics") or DEFAULT_REVIEW_TOPICS
+        self.authors: dict[str, str] = h.get("authors") or DEFAULT_AUTHORS
         self.field = h.get("field", "TITLE_ABS")  # search titles+abstracts, not full text (far fewer false hits)
         self.year_from = h.get("year_from")
         self.year_to = h.get("year_to")
@@ -70,8 +145,14 @@ class Harvester:
         self._last = 0.0
 
     # ---------------------------------------------------------------- helpers
-    def _query(self, q: str) -> str:
-        s = f"{self.field}:({q}) AND OPEN_ACCESS:y AND HAS_FT:y"
+    def _query(self, q: str, scope: str = "open_access", reviews: bool = False, raw: bool = False) -> str:
+        s = f"({q})" if raw else f"{self.field}:({q})"
+        if reviews:
+            s += ' AND PUB_TYPE:"review"'
+        if scope == "open_access":
+            s += " AND OPEN_ACCESS:y AND HAS_FT:y"
+        else:  # every record with this topic: journal articles (MEDLINE, PMC) and preprints
+            s += " AND (SRC:MED OR SRC:PMC OR SRC:PPR)"
         if self.year_from or self.year_to:
             s += f" AND PUB_YEAR:[{self.year_from or 1900} TO {self.year_to or 2100}]"
         return s
@@ -96,11 +177,22 @@ class Harvester:
                 time.sleep(min(60, 5 * 2 ** attempt))
         return None
 
+    def _sets(self, which: str) -> list[tuple[str, str, bool, bool]]:
+        """(name, query, reviews?, raw?) for 'topics', 'reviews', 'authors' or 'all' (topics + authors)."""
+        out = []
+        if which in ("topics", "all"):
+            out += [(n, q, False, False) for n, q in self.topics.items()]
+        if which in ("authors", "all"):
+            out += [(f"author: {n}", q, False, True) for n, q in self.authors.items()]
+        if which == "reviews":
+            out += [(n, q, True, False) for n, q in self.review_topics.items()]
+        return out
+
     # ---------------------------------------------------------------- count
-    def count(self) -> dict[str, int | str]:
+    def count(self, scope: str = "open_access", which: str = "all") -> dict[str, int | str]:
         out = {}
-        for name, q in self.topics.items():
-            r = self._get(f"{EPMC}/search", {"query": self._query(q), "format": "json", "pageSize": 1,
+        for name, q, rev, raw in self._sets(which):
+            r = self._get(f"{EPMC}/search", {"query": self._query(q, scope, rev, raw), "format": "json", "pageSize": 1,
                                              "resultType": "idlist"})
             if r is None or r.status_code != 200:
                 out[name] = f"error {getattr(r, 'status_code', 'network')}"
@@ -110,14 +202,15 @@ class Harvester:
         return out
 
     # ---------------------------------------------------------------- collect
-    def collect(self, max_per_topic: int | None = None) -> dict:
+    def collect(self, max_per_topic: int | None = None, which: str = "all") -> dict:
+        """List open-access full-text papers for topics + authors (which='all'), or open-access reviews."""
         added = 0
-        for name, q in self.topics.items():
+        for name, q, rev, raw in self._sets(which):
             cursor, n = "*", 0
             log(f"collecting: {name}")
             while True:
-                r = self._get(f"{EPMC}/search", {"query": self._query(q), "format": "json", "pageSize": 1000,
-                                                 "resultType": "lite", "cursorMark": cursor})
+                r = self._get(f"{EPMC}/search", {"query": self._query(q, "open_access", rev, raw), "format": "json",
+                                                 "pageSize": 1000, "resultType": "lite", "cursorMark": cursor})
                 if r is None or r.status_code != 200:
                     log(f"  stopped early for {name} (error); run collect again to resume")
                     break
@@ -164,7 +257,7 @@ class Harvester:
                                + (f" LIMIT {int(limit)}" if limit else "")).fetchall()
         todo, dup = [], 0
         for row in rows:
-            if row["doi"] and self.lib.store.paper_by_doi(row["doi"]):
+            if row["doi"] and self.lib.store.has_fulltext(row["doi"]):
                 self._status(row["pmcid"], "skipped_duplicate")
                 dup += 1
             else:
@@ -225,10 +318,10 @@ class Harvester:
 
     # ---------------------------------------------------------------- download only / ingest (split for HPC)
     def todo_ids(self) -> list[str]:
-        """PMC IDs still to get (not done, not already in the library by DOI)."""
+        """PMC IDs still to get (not done, not already in the library as full text)."""
         out = []
         for row in self.db.execute("SELECT pmcid, doi FROM candidates WHERE status IN ('todo','failed')"):
-            if not (row["doi"] and self.lib.store.paper_by_doi(row["doi"])):
+            if not (row["doi"] and self.lib.store.has_fulltext(row["doi"])):
                 out.append(row["pmcid"])
         return out
 
@@ -340,15 +433,74 @@ class Harvester:
                     skip += 1
                     continue
                 try:
-                    self._store(row, xml)
-                    self._status(row["pmcid"], "done")
+                    self._store(row, xml, commit=False)
+                    self.db.execute("UPDATE candidates SET status='done' WHERE pmcid=?", (row["pmcid"],))
                     got += 1
                 except Exception as e:
-                    self._status(row["pmcid"], "skipped_duplicate" if "duplicate" in str(e) else "failed")
+                    self.db.execute("UPDATE candidates SET status=? WHERE pmcid=?",
+                                    ("skipped_duplicate" if "duplicate" in str(e) else "failed", row["pmcid"]))
                     fail += 1
+            self.db.commit()  # one save per file of ~100 papers (much faster on shared file systems)
             prog.step(item=f.name)
         left = len(self.todo_ids())
         return {"stored": got, "skipped_already_done": skip, "failed_or_duplicate": fail, "still_todo": left}
+
+    # ---------------------------------------------------------------- abstracts for everything (all years)
+    def abstracts(self, max_per_topic: int | None = None, which: str = "all") -> dict:
+        """Title + abstract for EVERY record on your topics (not only open access), back to MEDLINE's start.
+        Stored as 'abstract only' papers: searchable, citable, exportable; replaced by full text if that arrives."""
+        added = seen = 0
+        t0 = time.time()
+        for name, q, rev, raw in self._sets(which):
+            cursor, n = "*", 0
+            log(f"abstracts: {name}")
+            while True:
+                r = self._get(f"{EPMC}/search", {"query": self._query(q, "all", rev, raw), "format": "json",
+                                                 "pageSize": 1000, "resultType": "core", "cursorMark": cursor})
+                if r is None or r.status_code != 200:
+                    log(f"  stopped early for {name} (error); run again to resume (done ones are skipped)")
+                    break
+                j = r.json()
+                res = j.get("resultList", {}).get("result", [])
+                for x in res:
+                    seen += 1
+                    added += self._store_abstract(x, name)
+                self.db.commit()  # one save per page of 1,000
+                n += len(res)
+                log(f"  {name}: {n} records looked at, {added} new abstracts so far ({time.time() - t0:.0f}s)")
+                nxt = j.get("nextCursorMark")
+                if not res or not nxt or nxt == cursor or (max_per_topic and n >= max_per_topic):
+                    break
+                cursor = nxt
+        return {"records_seen": seen, "abstracts_added": added,
+                "next": "run `gautam index --stage embed` to fingerprint them"}
+
+    def _store_abstract(self, x: dict, topic: str) -> int:
+        doi = (x.get("doi") or "").lower() or None
+        pmid = x.get("pmid") or x.get("id")
+        key = f"abstract:{pmid or doi}"
+        if (doi and self.lib.store.paper_by_doi(doi)) or self.lib.store.paper_by_path(key):
+            return 0  # already have it (full text or abstract)
+        title = re.sub(r"<[^>]+>", "", x.get("title") or "").strip().rstrip(".")
+        abstract = re.sub(r"<[^>]+>", " ", x.get("abstractText") or "")
+        abstract = re.sub(r"\s+", " ", abstract).strip()
+        if not title:
+            return 0
+        authors = [{"family": a.get("lastName") or a.get("collectiveName") or a.get("fullName", ""),
+                    "given": a.get("firstName") or a.get("initials") or ""}
+                   for a in (x.get("authorList") or {}).get("author", [])]
+        ji = x.get("journalInfo") or {}
+        year = x.get("pubYear")
+        meta = {"doi": doi, "title": title, "authors": authors,
+                "year": int(year) if str(year).isdigit() else None,
+                "journal": (ji.get("journal") or {}).get("title") or x.get("journalTitle"),
+                "volume": ji.get("volume"), "issue": ji.get("issue"), "pages": x.get("pageInfo"),
+                "type": "abstract", "meta_source": "europepmc", "stage": "meta"}
+        meta["citekey"] = make_citekey(meta, taken=self.lib.store.citekey_taken)
+        text = f"{title}. {abstract}" if abstract else title
+        chunk = Chunk(0, 0, "Abstract" if abstract else "Title only (no abstract in the record)", text)
+        self.lib.store.add_paper(key, "", len(text), 0.0, meta, [chunk], None, text, 0, commit=False)
+        return 1
 
     # ---------------------------------------------------------------- fetch (Europe PMC, one by one)
     def fetch(self, workers: int = 8, limit: int | None = None) -> dict:
@@ -359,7 +511,7 @@ class Harvester:
         with ThreadPoolExecutor(max_workers=workers) as tp:  # downloads in threads; database writes here
             futs = {}
             for row in rows:
-                if row["doi"] and self.lib.store.paper_by_doi(row["doi"]):
+                if row["doi"] and self.lib.store.has_fulltext(row["doi"]):
                     self._status(row["pmcid"], "skipped_duplicate")
                     dup += 1
                     prog.step(item=f"already have: {row['title'] or ''}")
@@ -390,7 +542,7 @@ class Harvester:
         r = self._get(f"{EPMC}/{pmcid}/fullTextXML")
         return r.content if (r is not None and r.status_code == 200 and r.content.lstrip().startswith(b"<")) else None
 
-    def _store(self, row, xml: bytes) -> None:
+    def _store(self, row, xml: bytes, commit: bool = True) -> None:
         meta, blocks = parse_jats(xml)
         meta.setdefault("doi", row["doi"])
         meta["title"] = meta.get("title") or row["title"]
@@ -400,12 +552,15 @@ class Harvester:
         chunks = make_chunks(blocks)
         if not chunks:
             raise ValueError("full text had no paragraphs")
-        if meta.get("doi") and self.lib.store.paper_by_doi(meta["doi"]):
-            raise ValueError("duplicate DOI")
+        old = self.lib.store.paper_by_doi(meta["doi"]) if meta.get("doi") else None
+        if old is not None:
+            if (old["type"] or "") != "abstract":
+                raise ValueError("duplicate DOI")
+            self.lib.store.delete_paper(old["id"])  # full text replaces an abstract-only entry
         meta["citekey"] = make_citekey(meta, taken=self.lib.store.citekey_taken)
         text = "\n\n".join(b.text for b in blocks)
         self.lib.store.add_paper(f"epmc:{row['pmcid']}", hashlib.sha1(xml).hexdigest(), len(xml), 0.0, meta,
-                                 chunks, None, text, 0)
+                                 chunks, None, text, 0, commit=commit)
 
 
 # -------------------------------------------------------------------- JATS XML -> passages

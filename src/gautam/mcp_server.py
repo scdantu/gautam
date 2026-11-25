@@ -9,10 +9,15 @@ from . import tools
 from .library import Library, log
 
 INSTRUCTIONS = """\
-Project Gautam is Sarath's personal library of research papers (full text, indexed locally).
-- For questions about the literature, call search_papers first and answer from the returned passages,
-  citing [citekey, page]. Say plainly when the library has nothing relevant; do not fill gaps from memory
-  without saying so. Flag any passage marked RETRACTED.
+Project Gautam is Sarath's personal library of research papers (full text plus abstracts, indexed locally).
+Work in two layers, and label which layer each statement comes from:
+1. Library first: call search_papers (several narrow queries beat one broad one) and answer from the returned
+   passages, citing [citekey, page]. Passages marked [abstract only] come from an abstract, not the full paper:
+   say so when a claim rests on one.
+2. Then fill gaps: add well-known work you know that the library lacks (classic papers, recent preprints),
+   checking each with PubMed or web search when those tools are available, and mark it "not in library".
+   Never present a reference you have not seen in the library or verified with a tool as checked.
+- Say plainly when the library has nothing relevant. Flag any passage marked RETRACTED.
 - search_papers checks for a few new PDFs itself. For many new files call update_library (in batches).
 - One-page summary: get_paper_text, fill its summary_template from the text only, then save_summary.
 - For a manuscript or grant: export_bib. To check a reference list: verify_bib. To complete a
@@ -35,7 +40,7 @@ def _fmt_hits(hits: list[dict]) -> str:
         return "No matching passages in the library."
     out = []
     for i, h in enumerate(hits, 1):
-        flag = "  **RETRACTED**" if h["retracted"] else ""
+        flag = ("  **RETRACTED**" if h["retracted"] else "") + ("  [abstract only]" if h.get("abstract_only") else "")
         sec = f" · {h['section']}" if h["section"] else ""
         where = f", p.{h['page']}" if h["page"] else ""
         out.append(f"[{i}] [{h['citekey']}{where}] {h['title']} ({h['year']}){flag}\n"
@@ -44,9 +49,11 @@ def _fmt_hits(hits: list[dict]) -> str:
 
 
 @mcp.tool()
-def search_papers(query: str, k: int = 8, year_from: int | None = None, year_to: int | None = None) -> str:
+def search_papers(query: str, k: int = 8, year_from: int | None = None, year_to: int | None = None,
+                  per_paper: int = 1) -> str:
     """Find the passages in the local paper library that best answer a question.
-    Combines meaning-based and exact-keyword search. Returns passages with [citekey, page]."""
+    Combines meaning-based and exact-keyword search. Returns passages with [citekey, page].
+    per_paper=1 (default) gives k different papers; raise it to see more passages from the same paper."""
     L = lib()
     todo, _, _ = L.scan()
     note = ""
@@ -55,7 +62,7 @@ def search_papers(query: str, k: int = 8, year_from: int | None = None, year_to:
             L.update(workers=1)
         else:
             note = f"\n\n(Note: {len(todo)} new PDFs are not indexed yet; call update_library.)"
-    return _fmt_hits(L.search(query, k=k, year_from=year_from, year_to=year_to)) + note
+    return _fmt_hits(L.search(query, k=k, year_from=year_from, year_to=year_to, per_paper=per_paper)) + note
 
 
 @mcp.tool()

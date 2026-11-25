@@ -33,3 +33,52 @@ requests_per_second = 8
 # [harvest.topics]
 # "Skp1" = 'Skp1 OR SKP1'
 # "protein design" = '"protein design" OR "de novo protein"'
+
+[graph]
+# Weighted citation-graph search (`gautam graph settings` explains each). Defaults shown.
+decay = 0.5          # weight kept per step away from your library
+beta = 0.5           # relevance vs citations: 0 citations only, 1 relevance only
+min_citations = 3    # cited by this many library papers -> eligible regardless of topic
+min_relevance = 0.6  # or cited once and at least this relevant
+budget = 20000       # most papers added per round
+max_hops = 2
+lookup_factor = 3
+knn = 10
+stop_gain = 0.01
+
+# Key people (searched for every step: counts, open-access collection, abstracts).
+# This table replaces the built-in list. Common names are pinned to an institution (AFF) or a subject,
+# or they match unrelated people.
+[harvest.authors]
+"Andrei Lupas" = 'AUTH:"Lupas AN"'
+"Helmut Grubmüller" = '(AUTH:"Grubmüller H" OR AUTH:"Grubmuller H")'
+"Lewis Kay" = 'AUTH:"Kay LE" AND (AFF:"Toronto" OR TITLE_ABS:(protein OR proteins OR enzyme OR NMR OR dynamics))'
+"Dorothee Kern" = 'AUTH:"Kern D" AND (AFF:"Brandeis" OR AFF:"Howard Hughes")'
+"Hans Frauenfelder" = 'AUTH:"Frauenfelder H"'
+"Rik Wierenga" = 'AUTH:"Wierenga RK"'
+"Martin Karplus" = 'AUTH:"Karplus M" AND TITLE_ABS:(protein OR proteins OR enzyme OR molecular OR dynamics)'
+"Arieh Warshel" = 'AUTH:"Warshel A"'
+"Alessandro Pandini" = 'AUTH:"Pandini A"'
+"Liskin Swint-Kruse" = 'AUTH:"Swint-Kruse L"'
+"David Baker" = 'AUTH:"Baker D" AND (AFF:"University of Washington" OR AFF:"Institute for Protein Design")'
+"Frances Arnold" = 'AUTH:"Arnold FH"'
+"Debora Marks" = 'AUTH:"Marks DS" AND (AFF:"Harvard" OR TITLE_ABS:(protein OR evolution OR sequence OR variant))'
+"Faruck Morcos" = 'AUTH:"Morcos F"'
+"Ruth Nussinov" = 'AUTH:"Nussinov R"'
+"Ivet Bahar" = 'AUTH:"Bahar I"'
+"Frank Noé" = '(AUTH:"Noé F" OR AUTH:"Noe F")'
+"Peter Wright" = 'AUTH:"Wright PE" AND (AFF:"Scripps" OR TITLE_ABS:(protein OR NMR))'
+"Jane Dyson" = 'AUTH:"Dyson HJ"'
+"Judith Klinman" = 'AUTH:"Klinman JP"'
+"Dan Herschlag" = 'AUTH:"Herschlag D"'
+"Sharon Hammes-Schiffer" = 'AUTH:"Hammes-Schiffer S"'
+"James Fraser" = 'AUTH:"Fraser JS" AND (AFF:"San Francisco" OR TITLE_ABS:(protein OR crystallography OR enzyme))'
+"Gregory Bowman" = 'AUTH:"Bowman GR"'
+"Kresten Lindorff-Larsen" = 'AUTH:"Lindorff-Larsen K"'
+"Michele Vendruscolo" = 'AUTH:"Vendruscolo M"'
+"Gerhard Hummer" = 'AUTH:"Hummer G"'
+"Gevorg Grigoryan" = 'AUTH:"Grigoryan G"'
+"Nir Ben-Tal" = 'AUTH:"Ben-Tal N"'
+"Turkan Haliloglu" = 'AUTH:"Haliloglu T"'
+"Elizabeth Komives" = 'AUTH:"Komives EA"'
+"Bert de Groot" = 'AUTH:"de Groot BL"'

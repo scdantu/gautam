@@ -45,6 +45,42 @@ Settings: `isambard/gautam.isambard.toml` (add your email). The result goes to `
 If the job hits 24 hours, submit it again; it carries on. If it says the compute node has no internet,
 run the printed commands on the login node, then resubmit.
 
+## No internet on compute nodes: download outside the job, process inside it
+Login nodes are for light work only, and compute nodes have no internet. So the download step only saves files
+(it mostly waits on the network); all parsing and database work happens inside the GPU job.
+
+**Option 1: login node** (a short, light transfer, like downloading a dataset):
+```
+cd /projects/u6wf/scdantu/Projects/gautam && source .venv-isambard/bin/activate
+export GAUTAM_NO_WAL=1 GAUTAM_CONFIG=isambard/gautam.isambard.toml
+gautam index --stage meta              # Crossref details for your PDFs (~900 small lookups)
+gautam harvest download --to harvest_xml
+sbatch isambard/run.sbatch             # ingests harvest_xml/, fingerprints, archives
+```
+**Option 2: nothing on the login node; download on your Mac**
+```
+# Isambard (instant):
+gautam harvest todo --out harvest_todo.txt
+# Mac:
+rsync isambard:/projects/u6wf/scdantu/Projects/gautam/harvest_todo.txt .
+gautam harvest download --ids harvest_todo.txt --to harvest_xml      # ~1-3 GB; delete after uploading
+rsync -av harvest_xml/ isambard:/projects/u6wf/scdantu/Projects/gautam/harvest_xml/
+# Isambard:
+sbatch isambard/run.sbatch
+```
+Re-running `download` skips what it already has. Ingesting twice is harmless.
+
+## Citation graph: grow the library along what it cites
+Each round adds the missing papers with the most weight: how many library papers cite them (fewer per
+step away from your own collection) times how close their abstract is to your library. Open-access ones
+are then fetched as full text. Settings: `[graph]` in `gautam.isambard.toml`; `gautam graph settings`.
+```
+GRAPH_DRY=1 sbatch isambard/graph.sbatch   # read references, score, list the 50 heaviest; adds nothing
+sbatch isambard/graph.sbatch               # 3 rounds (GRAPH_ROUNDS=5 for more), then fetch + fingerprint
+```
+`gautam graph coverage` gives the share of all references that point to papers you hold; it should rise
+each round and level off. Stop when a round adds less than 1%.
+
 ## 5. Bring the database home; delete the PDFs there
 ```
 rsync -av isambard:/projects/u6wf/scdantu/Projects/gautam/data_isambard/gautam.sqlite  ~/Projects/vsprojects/gautam/data/

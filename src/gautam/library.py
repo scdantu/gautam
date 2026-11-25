@@ -352,6 +352,27 @@ class Library:
         return f"Checked {len(rows)} papers; details found for {rep.meta_found}; {newly} newly flagged as retracted."
 
     # ------------------------------------------------------------ search
+    def _scores(self, mat, q):
+        """Similarity of the question to every passage. Uses the GPU when the model is on one: the fingerprints
+        are copied there once (about 0.8 GB per million passages) and each search is then a single fast step."""
+        dev = getattr(self.embedder, "_dev", "cpu")
+        if dev in ("mps", "cuda"):
+            try:
+                import torch
+                key = (id(mat), mat.shape)
+                if getattr(self, "_tkey", None) != key:
+                    self._tmat = torch.from_numpy(np.ascontiguousarray(mat, dtype=np.float16)).to(dev)
+                    self._tkey = key
+                qt = torch.from_numpy(q.astype(np.float16)).to(dev)
+                return (self._tmat @ qt).float().cpu().numpy()
+            except Exception as e:  # fall back to the CPU below
+                log(f"GPU search unavailable ({e}); using CPU")
+        sims = np.empty(len(mat), dtype=np.float32)
+        step = 200_000  # score in slices so a big library never needs a big block of memory
+        for a in range(0, len(mat), step):
+            sims[a:a + step] = np.asarray(mat[a:a + step], dtype=np.float32) @ q
+        return sims
+
     def search(self, query: str, k: int = 8, year_from: int | None = None, year_to: int | None = None,
                per_paper: int = 2, mode: str = "hybrid") -> list[dict]:
         """Meaning search + keyword search, merged by rank (reciprocal rank fusion).
@@ -361,10 +382,7 @@ class Library:
         cos: dict[int, float] = {}
         if len(ids) and mode in ("hybrid", "vector"):
             q = self.embedder.embed_query(query).astype(np.float32)
-            sims = np.empty(len(ids), dtype=np.float32)
-            step = 200_000  # score in slices so a big library never needs a big block of memory
-            for a in range(0, len(ids), step):
-                sims[a:a + step] = np.asarray(mat[a:a + step], dtype=np.float32) @ q
+            sims = self._scores(mat, q)
             top = np.argpartition(-sims, min(100, len(sims) - 1))[:100]
             top = top[np.argsort(-sims[top])]
             for r, i in enumerate(top):
@@ -391,6 +409,7 @@ class Library:
                         "journal": r["journal"], "page": r["page"], "section": r["section"], "text": r["text"],
                         "retracted": bool(r["retracted"]), "score": round(ranks[cid] * 1000, 2),
                         "similarity": round(cos[cid], 3) if cid in cos else None,
+                        "abstract_only": r["type"] == "abstract",
                         "path": r["path"]})
             if len(out) >= k:
                 break

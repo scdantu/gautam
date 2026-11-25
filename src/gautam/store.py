@@ -106,6 +106,11 @@ class Store:
     def paper_by_doi(self, doi: str):
         return self.db.execute("SELECT * FROM papers WHERE lower(doi)=lower(?)", (doi,)).fetchone()
 
+    def has_fulltext(self, doi: str) -> bool:
+        """True if this DOI is in the library with more than its abstract."""
+        r = self.paper_by_doi(doi)
+        return r is not None and (r["type"] or "") != "abstract"
+
     def find_paper(self, ref: str | int):
         """Find by id, citekey, DOI or (last resort) title words."""
         ref = str(ref).strip()
@@ -131,7 +136,7 @@ class Store:
         return bool(r) and r[0] != exclude_id
 
     def add_paper(self, path: str, sha1: str, size: int, mtime: float, meta: dict,
-                  chunks: list, embs: np.ndarray, fulltext: str, n_pages: int) -> int:
+                  chunks: list, embs: np.ndarray, fulltext: str, n_pages: int, commit: bool = True) -> int:
         cols = {k: meta.get(k) for k in PAPER_FIELDS}
         if isinstance(cols.get("authors"), list):
             cols["authors"] = json.dumps(cols["authors"])
@@ -148,7 +153,8 @@ class Store:
             [(pid, c.ord, c.page, c.section, c.text, e16[i].tobytes() if e16 is not None else None)
              for i, c in enumerate(chunks)],
         )
-        self.db.commit()
+        if commit:
+            self.db.commit()
         self._mat_version = None
         return pid
 
@@ -253,7 +259,7 @@ class Store:
         q = ",".join("?" * len(ids))
         rows = self.db.execute(
             f"SELECT c.id, c.paper_id, c.page, c.section, c.text, p.citekey, p.title, p.year, p.doi, p.journal, "
-            f"p.path, p.retracted FROM chunks c JOIN papers p ON p.id=c.paper_id WHERE c.id IN ({q})", ids
+            f"p.path, p.retracted, p.type FROM chunks c JOIN papers p ON p.id=c.paper_id WHERE c.id IN ({q})", ids
         ).fetchall()
         return {r["id"]: r for r in rows}
 

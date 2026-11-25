@@ -12,6 +12,9 @@ dependencies = [
     "transformers>=4.51",
 ]
 
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.5"]
+
 [project.scripts]
 gautam = "gautam.cli:main"
 gautam-mcp = "gautam.mcp_server:main"
