@@ -56,4 +56,8 @@ gautam index --stage embed
 echo "=== 5. archive: keep the text, stop tracking PDFs (safe to delete them now) ==="
 gautam archive
 gautam status
+if [ -f tests/eval_pduarticles.json ]; then
+  echo "=== 6. search quality check (known-answer questions) ==="
+  gautam eval
+fi
 ls -lh data_isambard/gautam.sqlite

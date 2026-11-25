@@ -29,3 +29,9 @@ __pycache__/
 # downloaded full text (papers)
 harvest_xml/
 harvest_todo.txt
+
+# sync.sh working folders
+isambard_logs/
+data_new/
+data_old_*/
+data_old/
